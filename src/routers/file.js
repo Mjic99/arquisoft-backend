@@ -1,21 +1,25 @@
 const express = require('express')
 const storage = require('../db/firebase')
 const stream = require('stream')
+const mime = require('mime-types')
 
 const router = new express.Router()
 
 router.post('/files', async (req, res) => {
     try {
-        const { data, name } = req.body
+        var { data, path, mimeType } = req.body
 
         const bufferStream = new stream.PassThrough();
         bufferStream.end(Buffer.from(data, 'base64'));
         
-        const file = storage.bucket().file(name)
+        const file = storage.bucket().file(path)
+
+        if (!mimeType)
+            mimeType = mime.lookup(path)
 
         bufferStream.pipe(file.createWriteStream({
             metadata: {
-              contentType: 'application/octet-stream'
+              contentType: mimeType || 'application/octet-stream'
             }
         }))
 
@@ -32,8 +36,21 @@ router.post('/files', async (req, res) => {
 
 router.get('/files', async (req, res) => {
     try {
-        const { name } = req.body
-        const file = storage.bucket().file(name)
+        const { path } = req.body
+        const file = storage.bucket().file(path)
+
+        const metadata = await file.getMetadata()
+        const contentType = metadata[1].body.contentType
+
+        if (!contentType)
+            contentType = mime.lookup(path)
+
+        const filename = path.substring(path.lastIndexOf('/') + 1)
+
+        res.set({
+            'Content-Type': contentType || 'application/octet-stream',
+            'Content-Disposition': `attachment; filename="${filename}"`
+        })
 
         file.createReadStream().pipe(res)
     } catch (error) {

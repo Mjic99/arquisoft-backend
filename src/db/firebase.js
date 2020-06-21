@@ -1,9 +1,11 @@
 const admin = require('firebase-admin')
 
-var serviceAccount = require('../../serviceAccountKey.json')
-
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL
+  }),
   databaseURL: 'https://ulimadrive-999.firebaseio.com',
   storageBucket: 'gs://ulimadrive-999.appspot.com'
 });
